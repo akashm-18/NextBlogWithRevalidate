@@ -1,4 +1,3 @@
-import MyProfile from './components/MyProfile'
 import NavBar from './components/NavBar'
 import './globals.css'
 
@@ -16,7 +15,6 @@ export default function RootLayout({
     <html lang="en">
       <body className='dark:bg-slate-800'>
         <NavBar />
-        <MyProfile />
         {children}
       </body>
     </html>
