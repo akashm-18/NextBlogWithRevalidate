@@ -1,11 +1,21 @@
 import getFormattedDate from "@/lib/getFormattedDate"
-import { getPostData, getSortedPostsData } from "@/lib/posts"
+import { getPostsMeta, getPostByName } from "@/lib/posts"
 import Link from "next/link"
 import { notFound } from "next/navigation"
 
+export const revalidate = 0
 
-export function generateStaticParams() {
-    const posts = getSortedPostsData() // deduplicated
+type Props = {
+    params : {
+        postId : string
+    }
+}
+
+
+export async function generateStaticParams() {
+    const posts = await getPostsMeta() // deduplicated
+
+    if(!posts) return []
 
     return posts.map((post) => (
         // Returning the below object
@@ -16,11 +26,9 @@ export function generateStaticParams() {
 }
 
 
-export  async function generateMetadata({params} : {params : {postId : string}}) {
-    const posts = getSortedPostsData()
-    const {postId} = params
+export  async function generateMetadata({params : { postId }} : Props) {
 
-    const post = posts.find(post => post.id === postId)
+    const post = await getPostByName(`${postId}.mdx`) // deduped
 
     if(!post) {
         return {
@@ -29,31 +37,39 @@ export  async function generateMetadata({params} : {params : {postId : string}})
     }
 
     return {
-        title : post.title,
+        title : post.meta.title,
     }
 }
 
-export default async function Post({params} : {params : {postId : string}}) {
-    const posts = getSortedPostsData()
-    const {postId} = params
+export default async function Post({params : {postId}} : Props) {
+    const post = await getPostByName(`${postId}.mdx`) // deduped
 
-    if(!posts.find(post => post.id === postId)) {
-        notFound()
-    }
+    if(!post) notFound()
 
-    const {title , date , contentHtml} = await getPostData(postId)
-    const pubDate = getFormattedDate(date)
+    const {meta , content} = post
+
+    const pubDate = getFormattedDate(meta.date)
+
+    const tags = meta.tags.map((tag , i) => (
+        <Link key={i} href={`/tags/${tag}`}>{tag}</Link>
+    ))
 
   return (
-    <main className="px-6 prose prose-xl prose-slate dark:prose-invert mx-auto">
-        <h1 className="text-3xl mt-4 mb-0">{title}</h1>
-        <p className="mt-0">{pubDate}</p>
+    <>
+        <h2 className="text-3xl mt-4 mb-0">{meta.title}</h2>
+        <p className="mt-0 text-sm">{pubDate}</p>
         <article>
-            <section dangerouslySetInnerHTML={{__html : contentHtml}} />
-            <p>
-                <Link href="/">⬅️Back to Home</Link>
-            </p>
+            {content}
         </article>
-    </main>
+        <section>
+            <h3>Related:</h3>
+            <div className="flex flex-row gap-4">
+                {meta.tags}
+            </div>
+        </section>
+        <p className="mb-10">
+            <Link href="/">⬅️Back to Home</Link>
+        </p>
+    </>
   )
 }

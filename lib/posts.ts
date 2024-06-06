@@ -56,7 +56,7 @@
 
 // Using the Special github repo we created 
 
-
+import { compileMDX } from 'next-mdx-remote/rsc'
 
 type Filetree = {
     "tree" : [
@@ -81,6 +81,20 @@ export async function getPostByName(fileName : string) : Promise<BlogPost | unde
     const rawMDX = await res.text()
 
     if(rawMDX === '404: Not Found') return undefined
+
+    const { frontmatter , content } = await compileMDX<{ title : string , date : string , tags : string[] }>({
+        source : rawMDX,
+        options : {
+            parseFrontmatter : true
+        }
+    })
+
+    const id = fileName.replace(/\.mdx$/, '')
+
+    const blogPostObj : BlogPost = {meta : {id , title : frontmatter.title , date : frontmatter.date , tags : frontmatter.tags} ,
+         content}
+         
+    return blogPostObj
 }
 
 
